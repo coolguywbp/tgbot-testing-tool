@@ -13,18 +13,25 @@ from tgbot.services.test import Test
 
 from tgbot.handlers.messages import messages
 
-async def user_start(m: Message, repo: Repo):
+async def user_start(m: Message, state: FSMContext, repo: Repo):
+    await state.finish()
     await repo.add_user(m.from_user.id)
     await m.reply(messages['start_message'])
 
-async def show_help(m: Message):
+async def show_basics(m: Message, state: FSMContext,):
+    await state.finish()
+    await m.answer(messages['query_examples'])
+
+async def show_help(m: Message, state: FSMContext,):
+    await state.finish()
     await m.answer(messages['instruction_message'])
 
 # Единичная проверка
 async def setup_single_query(m: Message, state: FSMContext, repo: Repo):
     await state.finish()
     await SingleQuery.waiting_for_query.set()
-    await m.answer(messages['query_instruction'].format(bot_name = await repo.get_bot_name(m.from_user.id)) + messages['query_examples'])
+    await m.answer(messages['query_examples'])
+    await m.answer(messages['query_instruction'].format(bot_name = await repo.get_bot_name(m.from_user.id)))
 
 async def run_single_query(m: Message, state: FSMContext, test: Test):
     await state.finish()
@@ -173,6 +180,7 @@ async def run_test(q: CallbackQuery, repo: Repo):
 def register_user(dp: Dispatcher):
     # Общие
     dp.register_message_handler(user_start, commands=["start"], state="*")
+    dp.register_message_handler(show_basics, commands=["basics", "examples"], state="*")
     dp.register_message_handler(show_help, commands=["help"], state="*")
     # Единичная проверка
     dp.register_message_handler(setup_single_query, commands=["query"], state="*")

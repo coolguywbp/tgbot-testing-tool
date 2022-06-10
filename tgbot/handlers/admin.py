@@ -8,7 +8,8 @@ from tgbot.services.test import Test
 
 from tgbot.handlers.messages import messages
 
-async def admin_start(m: Message, test: Test):
+async def admin_start(m: Message, repo: Repo, test: Test):
+    await repo.add_user(m.from_user.id)
     await m.answer(messages['start_message'])
 
 async def show_users(m: Message, repo: Repo):
