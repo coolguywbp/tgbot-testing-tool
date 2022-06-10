@@ -34,7 +34,11 @@ class Repo:
         """Create test in DB, ignore duplicates"""
         await self.conn.execute("insert or ignore into tests values(:name, :bot_name, NULL);", {'name': name, 'bot_name': bot_name})
         await self.conn.commit()
-        return
+
+    async def delete_test(self, name, bot_name):
+        """Delete test"""
+        await self.conn.execute("DELETE from tests where name = :name and bot_name = :bot_name;", {'name': name, 'bot_name': bot_name})
+        await self.conn.commit()
 
     async def get_tests(self, bot_name):
         """List tests for selected bot"""
@@ -51,3 +55,26 @@ class Repo:
         # queries = [f'{i+1}) {query}' for i, query in enumerate(queries_string.split('\n'))]
         # return bot_name, '\n'.join(queries)
         return tuple(result)
+
+    async def add_query(self, name, bot_name, query):
+        test = await self.get_test(name)
+        if test[2] == None:
+            updated_queries = query.strip('\n')
+        else:
+            query_list = test[2].split('\n')
+            query_list.append(query.strip('\n'))
+            updated_queries = '\n'.join(query_list)
+        await self.conn.execute("update tests set queries = :queries where name = :name and bot_name = :bot_name;", {'name': name, 'bot_name': bot_name, 'queries': updated_queries})
+        await self.conn.commit()
+
+    async def delete_last_query(self, name, bot_name):
+        test = await self.get_test(name)
+        query_list = test[2].split('\n')
+        deleted_query = query_list.pop()
+        if len(query_list) == 0:
+            await self.conn.execute("update tests set queries = NULL where name = :name and bot_name = :bot_name;", {'name': name, 'bot_name': bot_name})
+        else:
+            updated_queries = '\n'.join(query_list)
+            await self.conn.execute("update tests set queries = :queries where name = :name and bot_name = :bot_name;", {'name': name, 'bot_name': bot_name, 'queries': updated_queries})
+        await self.conn.commit()
+        return deleted_query
