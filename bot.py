@@ -1,23 +1,31 @@
 import asyncio
 import logging
+import aiosqlite
 
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.contrib.fsm_storage.redis import RedisStorage
 
+from pyrogram import Client
+
 from tgbot.config import load_config
 from tgbot.filters.role import RoleFilter, AdminFilter
+
 from tgbot.handlers.admin import register_admin
 from tgbot.handlers.user import register_user
+
 from tgbot.middlewares.db import DbMiddleware
 from tgbot.middlewares.role import RoleMiddleware
+from tgbot.middlewares.test import TestMiddleware
 
 logger = logging.getLogger(__name__)
 
 
-def create_pool(user, password, database, host, echo):
-    raise NotImplementedError  # TODO check your db connector
+async def create_pool(path):
+    return await aiosqlite.connect(path)
 
+def create_client(name, api_id, api_hash, phone_number):
+    return Client(name, api_id=api_id, api_hash=api_hash, phone_number=phone_number)
 
 async def main():
     logging.basicConfig(
@@ -31,18 +39,17 @@ async def main():
         storage = RedisStorage()
     else:
         storage = MemoryStorage()
-    pool = await create_pool(
-        user=config.db.user,
-        password=config.db.password,
-        database=config.db.database,
-        host=config.db.host,
-        echo=False,
-    )
 
-    bot = Bot(token=config.tg_bot.token)
+    pool = await create_pool('sqlite3.db')
+
+    bot = Bot(token=config.tg_bot.token, parse_mode=types.ParseMode.HTML)
     dp = Dispatcher(bot, storage=storage)
+    client = create_client(config.pyrogram_client.name, config.pyrogram_client.api_id, config.pyrogram_client.api_hash, config.pyrogram_client.phone_number)
+
     dp.middleware.setup(DbMiddleware(pool))
     dp.middleware.setup(RoleMiddleware(config.tg_bot.admin_id))
+    dp.middleware.setup(TestMiddleware(client))
+
     dp.filters_factory.bind(RoleFilter)
     dp.filters_factory.bind(AdminFilter)
 
@@ -56,6 +63,10 @@ async def main():
         await dp.storage.close()
         await dp.storage.wait_closed()
         await bot.session.close()
+
+        await pool.close()
+
+        await client.log_out()
 
 
 if __name__ == '__main__':

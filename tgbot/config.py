@@ -16,10 +16,17 @@ class TgBot:
     admin_id: int
     use_redis: bool
 
+@dataclass
+class PyrogramClient:
+    name: str
+    api_id: int
+    api_hash: str
+    phone_number: str
 
 @dataclass
 class Config:
     tg_bot: TgBot
+    pyrogram_client: PyrogramClient
     db: DbConfig
 
 
@@ -34,6 +41,7 @@ def load_config(path: str):
     config.read(path)
 
     tg_bot = config["tg_bot"]
+    pyrogram_client = config["pyrogram_client"]
 
     return Config(
         tg_bot=TgBot(
@@ -42,4 +50,10 @@ def load_config(path: str):
             use_redis=cast_bool(tg_bot.get("use_redis")),
         ),
         db=DbConfig(**config["db"]),
+        pyrogram_client=PyrogramClient(
+            name=pyrogram_client["name"],
+            api_id=int(pyrogram_client["api_id"]),
+            api_hash=pyrogram_client["api_hash"],
+            phone_number=pyrogram_client["phone_number"]
+        )
     )
