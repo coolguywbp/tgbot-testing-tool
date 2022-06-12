@@ -16,13 +16,13 @@ messages = {
 <b>TgTestLang</b>
 
 Структура проверки:
-<code>action input -> expected_output -> expected_output -> ...</code>
+<code>action value -> expected_output -> expected_output -> ...</code>
 
 Сначала задаём действие (<code>action</code>). Иx 2 вида:
 1) Ввод текста <code>type</code>
 2) Нажатие на кнопку <code>press</code> (coming soon)
 
-Затем указываем входные данные (<code>input</code>). Они бывают 3 видов:
+Затем указываем входные данные (<code>value</code>). Они бывают 3 видов:
 1) Команда <code>/example</code>
 2) Пользовательский текст <code>'example'</code>
 3) Нажатие на inline-кнопку (coming soon)
@@ -30,14 +30,11 @@ messages = {
 Далее пишем символьный оператор <code>-></code>
 
 После этого описываем ожидаемый от бота ответ (<code>expected_output</code>):
-1) Сначала описываем тип ответа, в скобочках количество ожидаемых сообщений:
+1) Сначала описываем тип ответа, в скобочках можно задать количество ожидаемых сообщений:
 <code>text(2)</code>
 2) Оператор <code>has</code> проверяет содержится ли в тексте указанная строка:
-<code>type /help -> text(1) has 'Hello! This is help message.'</code>
+<code>type /help -> text() has 'Hello! This is help message.'</code>
 3) Оператор <code>pass</code> означает, что <code>expected_output</code> может быть любой
-
-Можно описывать цепочки ответов
-<code>type /goblin -> video(1) -> text(1)</code>
 
 Используем проверку <code>type /cancel -> pass</code> чтобы вывести бота из стейта (если такая команда у него предусмотрена конечно)
 
@@ -55,7 +52,7 @@ messages = {
 <code>type /help -> text(1) has 'Hello! This a is help message.'</code>
 Проверяет содержится ли в ответе на команду <code>/help</code> текст 'Hello! This is help message'.
 
-<code>type /goblin -> video(1) -> text(1)</code>
+<code>type /goblin -> video(1) text(1)</code>
 Проверяет выводится ли по команде <code>/goblin</code> сначало видео, а потом текстовое сообщение.
 
 <code>type 'Hello' -> voice(1)</code>

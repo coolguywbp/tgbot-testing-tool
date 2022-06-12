@@ -36,8 +36,12 @@ async def setup_single_query(m: Message, state: FSMContext, repo: Repo):
 async def run_single_query(m: Message, state: FSMContext, test: Test):
     await state.finish()
     query = m.text
-    test_log = test.run_query_demo(query)
-    await m.answer(test_log)
+    await test.run_query(query, clear_chat = True)
+
+async def not_stated_input(m: Message, test: Test):
+    query = m.text
+    await test.run_query(query, clear_chat = True)
+
 # Показываем все тесты
 async def show_tests(m: Message, state: FSMContext, repo: Repo):
     await state.finish()
@@ -55,7 +59,8 @@ async def show_tests(m: Message, state: FSMContext, repo: Repo):
                 queries_len = 0
             else:
                 queries_len = len(test[2].split('\n'))
-            tests_list.append(f'<b>{str(test[0])}</b>({str(queries_len)})     /goto_{str(test[0])}')
+            test_passed = '❌' if '❌' in test[2] else '✅'
+            tests_list.append(f'{test_passed} <b>{str(test[0])}</b>({str(queries_len)})     /goto_{str(test[0])}')
         await m.answer(messages['tests_list_title'].format(bot_name=bot_name) + '\n'.join(tests_list), reply_markup=keyboard)
 
 async def back_to_tests(q: CallbackQuery, state: FSMContext, repo: Repo):
@@ -74,7 +79,8 @@ async def back_to_tests(q: CallbackQuery, state: FSMContext, repo: Repo):
                 queries_len = 0
             else:
                 queries_len = len(test[2].split('\n'))
-            tests_list.append(f'<b>{str(test[0])}</b>({str(queries_len)})     /goto_{str(test[0])}')
+            test_passed = '❌' if '❌' in test[2] else '✅'
+            tests_list.append(f'{test_passed} <b>{str(test[0])}</b>({str(queries_len)})     /goto_{str(test[0])}')
         response = messages['tests_list_title'].format(bot_name=bot_name) + '\n'.join(tests_list)
     with suppress(MessageNotModified):
         await q.message.edit_text(response)
@@ -144,7 +150,7 @@ async def edit_test(m: Message, state: FSMContext, repo: Repo):
         keyboard.insert(InlineKeyboardButton('➕', callback_data='setup_query'))
         keyboard.insert(InlineKeyboardButton('🔙', callback_data='back_to_tests'))
         keyboard.insert(InlineKeyboardButton('➖', callback_data='delete_query'))
-        queries_list = [f'{i+1}) {query}' for i, query in enumerate(queries.split('\n'))]
+        queries_list = [f'{i+1}) <code>{query[:-2]}</code> {query[-1]}' for i, query in enumerate(queries.split('\n'))]
         await m.answer(messages['test_queries_list_title'].format(test_name=test_name, bot_name=bot_name) +'\n'+'\n'.join(queries_list), reply_markup=keyboard)
 
 # Запрашиваем проверку для добавления в тест
@@ -153,7 +159,7 @@ async def setup_query(q: CallbackQuery, state: FSMContext, repo: Repo):
     async with state.proxy() as data:
         test_name = data['test_name']
     await EditTest.waiting_for_query.set()
-    await q.message.answer(messages['query_examples'])
+    # await q.message.answer(messages['query_examples'])
     await q.message.answer(messages['add_query_instruction'].format(test_name=test_name, bot_name=bot_name))
 
 # Добавляем проверку в тест
@@ -174,8 +180,14 @@ async def delete_query(q: CallbackQuery, state: FSMContext, repo: Repo):
     await q.message.answer(messages['query_deleted'].format(test_name=test_name, bot_name=bot_name, query=deleted_query))
     await edit_test(q.message, state, repo)
 
-async def run_test(q: CallbackQuery, repo: Repo):
-    return
+async def run_test(q: CallbackQuery, state: FSMContext, repo: Repo, test: Test):
+    async with state.proxy() as data:
+        test_name = data['test_name']
+    test_name, bot_name, queries = await repo.get_test(test_name)
+    await q.message.answer(f'🗿 Начинаю тест {test_name} для {bot_name}...')
+    passed_queries = await test.run_test(queries)
+    await repo.update_test_passed_queries(test_name, bot_name, passed_queries)
+    await edit_test(q.message, state, repo)
 # Регистрируем хендлеры
 def register_user(dp: Dispatcher):
     # Общие
@@ -196,7 +208,9 @@ def register_user(dp: Dispatcher):
     dp.register_callback_query_handler(setup_query, lambda c: c.data in ['setup_query'], state=EditTest.choosing_option)
     dp.register_callback_query_handler(delete_query, lambda c: c.data in ['delete_query'], state=EditTest.choosing_option)
     dp.register_message_handler(add_query, state=EditTest.waiting_for_query)
-
+    dp.register_callback_query_handler(run_test, lambda c: c.data in ['run_test'], state=EditTest.choosing_option)
+    # Нот стейтед
+    dp.register_message_handler(not_stated_input, state="*")
 # Стейты
 class NameTest(StatesGroup):
     waiting_for_test_name = State()

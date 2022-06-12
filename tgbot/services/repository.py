@@ -56,13 +56,32 @@ class Repo:
         # return bot_name, '\n'.join(queries)
         return tuple(result)
 
+    async def update_test_passed_queries(self, name, bot_name, passed_queries):
+        test = await self.get_test(name)
+        query_list = test[2].split('\n')
+        updated_queries = []
+        for i, passed in enumerate(passed_queries):
+            if passed:
+                query = query_list[i]
+                query = query[:-1] + '✅'
+                updated_queries.append(query)
+            else:
+                query = query_list[i]
+                query = query[:-1] + '❌'
+                updated_queries.append(query)
+        updated_queries = '\n'.join(updated_queries)
+        await self.conn.execute("update tests set queries = :queries where name = :name and bot_name = :bot_name;", {'name': name, 'bot_name': bot_name, 'queries': updated_queries})
+        await self.conn.commit()
+
     async def add_query(self, name, bot_name, query):
         test = await self.get_test(name)
+        # Для проверки пройденности теста по-тупому добавляем ✅ или ❌ в конце :)
+        query = query.strip('\n') + ' ❌'
         if test[2] == None:
-            updated_queries = query.strip('\n')
+            updated_queries = query
         else:
             query_list = test[2].split('\n')
-            query_list.append(query.strip('\n'))
+            query_list.append(query)
             updated_queries = '\n'.join(query_list)
         await self.conn.execute("update tests set queries = :queries where name = :name and bot_name = :bot_name;", {'name': name, 'bot_name': bot_name, 'queries': updated_queries})
         await self.conn.commit()

@@ -22,6 +22,7 @@ class PyrogramClient:
     api_id: int
     api_hash: str
     phone_number: str
+    session_string: str
 
 @dataclass
 class Config:
@@ -54,6 +55,7 @@ def load_config(path: str):
             name=pyrogram_client["name"],
             api_id=int(pyrogram_client["api_id"]),
             api_hash=pyrogram_client["api_hash"],
-            phone_number=pyrogram_client["phone_number"]
+            phone_number=pyrogram_client["phone_number"],
+            session_string=pyrogram_client["session_string"]
         )
     )

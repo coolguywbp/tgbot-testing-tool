@@ -20,12 +20,21 @@ from tgbot.middlewares.test import TestMiddleware
 
 logger = logging.getLogger(__name__)
 
-
+# Sqlite3
 async def create_pool(path):
     return await aiosqlite.connect(path)
 
-def create_client(name, api_id, api_hash, phone_number):
-    return Client(name, api_id=api_id, api_hash=api_hash, phone_number=phone_number)
+# Pyrogram Client
+async def create_client(session_string, api_id, api_hash, phone_number):
+    client = Client(
+        session_string,
+        api_id=api_id,
+        api_hash=api_hash,
+        phone_number=phone_number
+    )
+    await client.start()
+    # print(await client.export_session_string())
+    return client
 
 async def main():
     logging.basicConfig(
@@ -44,7 +53,13 @@ async def main():
 
     bot = Bot(token=config.tg_bot.token, parse_mode=types.ParseMode.HTML)
     dp = Dispatcher(bot, storage=storage)
-    client = create_client(config.pyrogram_client.name, config.pyrogram_client.api_id, config.pyrogram_client.api_hash, config.pyrogram_client.phone_number)
+
+    client = await create_client(
+        config.pyrogram_client.session_string,
+        config.pyrogram_client.api_id,
+        config.pyrogram_client.api_hash,
+        config.pyrogram_client.phone_number
+    )
 
     dp.middleware.setup(DbMiddleware(pool))
     dp.middleware.setup(RoleMiddleware(config.tg_bot.admin_id))
@@ -65,9 +80,6 @@ async def main():
         await bot.session.close()
 
         await pool.close()
-
-        await client.log_out()
-
 
 if __name__ == '__main__':
     try:

@@ -8,11 +8,14 @@ from tgbot.services.test import Test
 
 from tgbot.handlers.messages import messages
 
-async def admin_start(m: Message, repo: Repo, test: Test):
+async def admin_start(m: Message, state: FSMContext, repo: Repo, test: Test):
+    await state.finish()
     await repo.add_user(m.from_user.id)
-    await m.answer(messages['start_message'])
+    # await m.answer(messages['start_message'])
+    await test.test_start()
 
-async def show_users(m: Message, repo: Repo):
+async def show_users(m: Message, state: FSMContext, repo: Repo):
+    await state.finish()
     list = await repo.list_users()
     await m.answer(list)
 
